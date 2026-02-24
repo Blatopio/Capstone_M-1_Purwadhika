@@ -3,7 +3,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import mysql.connector
-import git
 
 # Connect to SQL Database
 def conn_sql():
@@ -14,7 +13,7 @@ def conn_sql():
             password="user",
             database="dotdotdot_app"
         )
-        print("Connected to database")
+        print("*Connected to database...*")
         return mydb
     except mysql.connector.Error as err:
         print(f"Error: {err}")
