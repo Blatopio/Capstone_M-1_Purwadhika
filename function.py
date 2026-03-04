@@ -1,10 +1,14 @@
+#---------------
 # Library List
+#---------------
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import mysql.connector
 
+#---------------
 # Connect to SQL Database
+#---------------
 def conn_sql():
     try:
         mydb = mysql.connector.connect(
@@ -18,7 +22,9 @@ def conn_sql():
     except mysql.connector.Error as err:
         print(f"Error: {err}")
 
-#Menu
+#---------------
+#login
+# ---------------
 def login_menu():
     #get user input for login
     username = input('\nUsername: ')
@@ -30,23 +36,34 @@ def auth_verify(username, password):
     #verify login credentials
     mydb = conn_sql()
     cursor = mydb.cursor()
-    query = "SELECT * FROM accounts WHERE username = %s AND password = %s"
+    query = "SELECT id_account, username, role FROM accounts WHERE username = %s AND password = %s"
     cursor.execute(query, (username, password))
-    result = cursor.fetchall()
-    print(f"Login query executed. Result: {result}")
+    result = cursor.fetchone()
+    cursor.close()
+    mydb.close()
+    
     if result:
-        print("Login successful!")
-        auth = True
-        while auth:
-            print("\n[1] View Profile")
-            print("[2] Logout")
-            choice = input("Enter your choice: ")
-            if choice == "1":
-                print("Viewing profile...")
-            elif choice == "2":
-                print("Logging out...")
-                auth = False
+        id_account, username, role = result
+        print(f"\nLogin successful! Welcome, {username}!")
+        return {"id_account": id_account, "username": username, "role": role}
     else:
-        print("Invalid username or password.")
+        print("Invalid username or password!, Please try again or make a new account.")
         
+#---------------
+# Routing menu based on role
+#---------------
+def route_to_menu(user):
+    """Routes the logged-in user to the correct menu based on their role."""
+    from menu_admin import admin_menu
+    from menu_strmanager import store_manager_menu
+    from menu_customer import customer_menu
 
+    role = user['role']
+    if role == 'admin':
+        admin_menu(user)
+    elif role == 'store_manager':
+        store_manager_menu(user)
+    elif role == 'customer':
+        customer_menu(user)
+    else:
+        print(f"\n[!] Unknown role '{role}'. Access denied.")
