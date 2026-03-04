@@ -5,6 +5,20 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import mysql.connector
+import os
+import sys
+
+def exit_app():
+    print("Exiting the application...")
+    sys.exit()
+
+#clear screen
+def clearscreen():
+    # 'nt' is the name for Windows OS, 'posix' for Linux/macOS
+    if os.name == 'nt':
+        _ = os.system('cls')
+    else:
+        _ = os.system('clear')
 
 #---------------
 # Connect to SQL Database
@@ -29,7 +43,7 @@ def login_menu():
     #get user input for login
     username = input('\nUsername: ')
     password = input('Password: ')
-    print(f"\nAttempting login for user: {username}")
+    print(f"\nAttempting login for user: {username}\n")
     return username, password
 
 def auth_verify(username, password):
