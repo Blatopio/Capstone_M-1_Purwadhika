@@ -13,15 +13,15 @@ def store_manager_menu(user):
               ''')
         print(f'''
               
-╔══════════════════════════════════════╗
-║          STORE MANAGER PANEL         ║
-║  Logged in as: {user['username']:^22}║
-╠══════════════════════════════════════╣
-║  [1] View Current Stock              ║
-║  [2] Update Stock                    ║
-║  [3] Show Stock Statistics           ║
-║  [0] Logout                          ║
-╚══════════════════════════════════════╝''')
+            ╔══════════════════════════════════════╗
+            ║          STORE MANAGER PANEL         ║
+            ║  Logged in as: {user['username']:^22}║
+            ╠══════════════════════════════════════╣
+            ║  [1] View Current Stock              ║
+            ║  [2] Update Stock                    ║
+            ║  [3] Show Stock Statistics           ║
+            ║  [0] Logout                          ║
+            ╚══════════════════════════════════════╝''')
 
         choice = input("Enter your choice: ").strip()
         break

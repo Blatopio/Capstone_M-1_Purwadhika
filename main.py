@@ -15,14 +15,14 @@ def main():
                                                                 
           ''')
         print('''
-╔══════════════════════════════════════╗
-║ [1] Login to existing account        ║
-║ [2] Create new account               ║
-║ [0] Exit                             ║
-╚══════════════════════════════════════╝''')
-        choice = int(input("\nEnter your choice: ").strip())
+            ╔══════════════════════════════════════╗
+            ║ [1] Login to existing account        ║
+            ║ [2] Create new account               ║
+            ║ [0] Exit                             ║
+            ╚══════════════════════════════════════╝''')
+        choice = input("\nEnter your choice: ").strip()
         fn.clearscreen()
-        if choice == 1:
+        if choice == "1":
             print("\n[Login]")
             username, password = fn.login_menu()
             user = fn.auth_verify(username, password)
@@ -30,12 +30,11 @@ def main():
                 fn.clearscreen()
                 fn.route_to_menu(user)
 
-        elif choice == 2:
+        elif choice == "2":
             print("Create new account")
 
-        elif choice == 0:
-            print("Exiting the application...")
-            break
+        elif choice == "0":
+            fn.exit_app()
         
         else:
             print("\n[Invalid choice. Please enter 1 or 2 and 0 for exit.]")

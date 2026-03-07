@@ -13,15 +13,15 @@ def customer_menu(user):
               ''')
         print(f'''
    
-╔══════════════════════════════════════╗
-║            CUSTOMER PANEL            ║
-║  Logged in as: {user['username']:^22}║
-╠══════════════════════════════════════╣
-║  [1] View Menu                       ║
-║  [2] Place Order                     ║
-║  [3] View My Orders                  ║
-║  [0] Logout                          ║
-╚══════════════════════════════════════╝''')
+            ╔══════════════════════════════════════╗
+            ║            CUSTOMER PANEL            ║
+            ║  Logged in as: {user['username']:^22}║
+            ╠══════════════════════════════════════╣
+            ║  [1] View Menu                       ║
+            ║  [2] Place Order                     ║
+            ║  [3] View My Orders                  ║
+            ║  [0] Logout                          ║
+            ╚══════════════════════════════════════╝''')
 
         choice = input("Enter your choice: ").strip()
         break

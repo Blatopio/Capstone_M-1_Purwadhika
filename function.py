@@ -8,11 +8,16 @@ import mysql.connector
 import os
 import sys
 
+#---------------
+# Exit Application
+#---------------
 def exit_app():
     print("Exiting the application...")
     sys.exit()
 
-#clear screen
+#---------------
+# Clear Screen
+#---------------
 def clearscreen():
     # 'nt' is the name for Windows OS, 'posix' for Linux/macOS
     if os.name == 'nt':
@@ -37,7 +42,7 @@ def conn_sql():
         print(f"Error: {err}")
 
 #---------------
-#login
+# Login
 # ---------------
 def login_menu():
     #get user input for login
