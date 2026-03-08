@@ -1,18 +1,15 @@
 import function as fn
 import pandas as pd
 from tabulate import tabulate
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 # ──────────────────────────
 # Main menu for admin
 # ──────────────────────────
 def admin_menu(user):
     while True:
-        print(r'''
-   ___       __  ___       __  ___       __      ___   ___  ___ 
-  / _ \___  / /_/ _ \___  / /_/ _ \___  / /_    / _ | / _ \/ _  \
- / // / _ \/ __/ // / _ \/ __/ // / _ \/ __/   / __ |/ ___/ ___/    
-/____/\___/\__/____/\___/\__/____/\___/\__/   /_/ |_/_/  /_/ 
-              ''')
+        fn.print_header()
         print(f'''
         ╔══════════════════════════════════════╗
         ║             ADMIN PANEL              ║
@@ -60,6 +57,7 @@ def admin_menu(user):
 # ──────────────────────────────────────────────
 def admin_view_sales():
     while True:
+        fn.print_header()
         print('''
         ╔══════════════════════════════════════╗
         ║          VIEW SALES REPORT           ║
@@ -69,27 +67,33 @@ def admin_view_sales():
         ║  [3] Filter by menu item             ║
         ║  [4] Filter by customer              ║
         ║  [0] Back                            ║
+        ║  [999] Exit Application              ║
         ╚══════════════════════════════════════╝''')
         choice = input("\nEnter your choice: ").strip()
 
         if choice == "1":
             fn.clearscreen()
             show_sales_table()
+            input("\nPress Enter to go back...")
         elif choice == "2":
             fn.clearscreen()
             filter_by_date()
+            input("\nPress Enter to go back...")
         elif choice == "3":
             fn.clearscreen()
             filter_by_menu()
+            input("\nPress Enter to go back...")
         elif choice == "4":
             fn.clearscreen()
             filter_by_customer()
+            input("\nPress Enter to go back...")
         elif choice == "0":
             fn.clearscreen()
             break
+        elif choice == "999":
+            fn.exit_app()
         else:
             print("\n[!] Invalid choice. Please try again.")
-        input("\nPress Enter to continue...")
         fn.clearscreen()
 
 # ──────────────────────────────────────────────
@@ -237,3 +241,131 @@ def filter_by_customer():
         params=(selected_id,)
     )
 
+# ──────────────────────────────────────────────
+# FEATURE 2 - SHOW SALES STATISTICS
+# ──────────────────────────────────────────────
+
+def admin_show_statistics():
+    while True:
+        fn.print_header()
+        print('''
+        ╔══════════════════════════════════════╗
+        ║          SALES STATISTICS            ║
+        ╠══════════════════════════════════════╣
+        ║  [1] All time statistics             ║
+        ║  [2] Statistics by date range        ║
+        ║  [0] Back                            ║
+        ║  [999] Exit Application              ║
+        ╚══════════════════════════════════════╝''')
+        choice = input("\nEnter your choice: ").strip()
+
+        if choice == "1":
+            fn.clearscreen()
+            show_statistics()
+            input("\nPress Enter to go back...")
+        elif choice == "2":
+            fn.clearscreen()
+            show_statistics_by_date()
+            input("\nPress Enter to go back...")
+        elif choice == "0":
+            fn.clearscreen()
+            break    
+        elif choice == "999":
+            fn.exit_app()
+        else:
+            print("\n[!] Invalid choice. Please try again.")
+        fn.clearscreen()
+
+# ──────────────────────────────────────────────
+#[2.1] Function to show overall sales statistics
+# ──────────────────────────────────────────────
+
+def show_statistics(label="ALL TIME", date_filter=None):
+    mydb = fn.conn_sql()
+    
+    query = """
+        SELECT 
+            t.total_price,
+            t.quantity,
+            t.payment_method,
+            m.name,
+            m.size,
+            t.date
+        FROM transactions t
+        JOIN menu m ON t.id_menu = m.id_menu
+    """
+
+    if date_filter:
+        query += date_filter
+
+    df = pd.read_sql(query, mydb)
+    mydb.close()
+
+    df['menu_label'] = df['name'] + ' (' + df['size'] + ')'
+
+    print(df.head())
+
+    total_transactions = len(df)
+    total_revenue = df['total_price'].sum()
+    avg_transaction_value = df['total_price'].mean()
+    
+    best_seller = df.groupby('menu_label')['quantity'].sum().idxmax()
+    best_seller_qty = df.groupby('menu_label')['quantity'].sum().max()
+
+    print(best_seller, best_seller_qty)
+
+    rev_per_menu = df.groupby('menu_label')['total_price'].sum().reset_index()
+    print(rev_per_menu.head())
+    rev_per_menu.columns = ['Menu', 'Revenue']
+    rev_per_menu = rev_per_menu.sort_values('Revenue', ascending=False)
+
+    
+    rev_per_payment = df.groupby('payment_method')['total_price'].sum().reset_index()
+    rev_per_payment.columns = ['Payment Method', 'Revenue']
+
+    print(f"\n{'='*55}")
+    print(f"  SALES STATISTICS — {label}")
+    print(f"{'='*55}")
+    print(f"  Total Transactions : {total_transactions:,}")
+    print(f"  Total Revenue      : Rp {total_revenue:,.0f}")
+    print(f"  Avg Order Value    : Rp {avg_transaction_value:,.0f}")
+    print(f"  Best Selling Menu  : {best_seller} — {best_seller_qty:,} pcs sold")
+
+    print(f"\n  {'─'*51}")
+    print(f"  REVENUE PER MENU ITEM")
+    print(f"  {'─'*51}")
+    rev_per_menu['Revenue'] = rev_per_menu['Revenue'].apply(lambda x: f"Rp {x:,.0f}")
+    rev_per_menu.index = range(1, len(rev_per_menu) + 1)
+    print(tabulate(rev_per_menu, headers='keys', tablefmt='psql', showindex=True))
+
+    print(f"\n  {'─'*51}")
+    print(f"  REVENUE PER PAYMENT METHOD")
+    print(f"  {'─'*51}")
+    rev_per_payment['Revenue'] = rev_per_payment['Revenue'].apply(lambda x: f"Rp {x:,.0f}")
+    rev_per_payment.index = range(1, len(rev_per_payment) + 1)
+    print(tabulate(rev_per_payment, headers='keys', tablefmt='psql', showindex=True))
+    print(f"\n{'='*55}\n")
+
+# ──────────────────────────────────────────────
+#[2.2] Function to show sales statistics filtered by date range
+# ──────────────────────────────────────────────
+
+def show_statistics_by_date():
+    print("  ── Statistics by Date Range ──")
+    print("  Format: YYYY-MM-DD (e.g. 2026-01-01)\n")
+
+    while True:
+        start = input("  Start date: ").strip()
+        end   = input("  End date  : ").strip()
+        try:
+            pd.to_datetime(start)
+            pd.to_datetime(end)
+            break
+        except ValueError:
+            print("\n[!] Invalid date format. Please use YYYY-MM-DD.\n")
+
+    fn.clearscreen()
+    show_statistics(
+        label=f"{start} to {end}",
+        date_filter=f" WHERE DATE(t.date) BETWEEN '{start}' AND '{end}'"
+    )
