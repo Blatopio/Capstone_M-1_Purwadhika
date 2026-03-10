@@ -1,18 +1,15 @@
 import function as fn
 import pandas as pd
 from tabulate import tabulate
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 # ──────────────────────────
 # Main menu for admin
 # ──────────────────────────
 def admin_menu(user):
     while True:
-        print(r'''
-   ___       __  ___       __  ___       __      ___   ___  ___ 
-  / _ \___  / /_/ _ \___  / /_/ _ \___  / /_    / _ | / _ \/ _  \
- / // / _ \/ __/ // / _ \/ __/ // / _ \/ __/   / __ |/ ___/ ___/    
-/____/\___/\__/____/\___/\__/____/\___/\__/   /_/ |_/_/  /_/ 
-              ''')
+        fn.print_header()
         print(f'''
         ╔══════════════════════════════════════╗
         ║             ADMIN PANEL              ║
@@ -60,6 +57,7 @@ def admin_menu(user):
 # ──────────────────────────────────────────────
 def admin_view_sales():
     while True:
+        fn.print_header()
         print('''
         ╔══════════════════════════════════════╗
         ║          VIEW SALES REPORT           ║
@@ -69,27 +67,33 @@ def admin_view_sales():
         ║  [3] Filter by menu item             ║
         ║  [4] Filter by customer              ║
         ║  [0] Back                            ║
+        ║  [999] Exit Application              ║
         ╚══════════════════════════════════════╝''')
         choice = input("\nEnter your choice: ").strip()
 
         if choice == "1":
             fn.clearscreen()
             show_sales_table()
+            input("\nPress Enter to go back...")
         elif choice == "2":
             fn.clearscreen()
             filter_by_date()
+            input("\nPress Enter to go back...")
         elif choice == "3":
             fn.clearscreen()
             filter_by_menu()
+            input("\nPress Enter to go back...")
         elif choice == "4":
             fn.clearscreen()
             filter_by_customer()
+            input("\nPress Enter to go back...")
         elif choice == "0":
             fn.clearscreen()
             break
+        elif choice == "999":
+            fn.exit_app()
         else:
             print("\n[!] Invalid choice. Please try again.")
-        input("\nPress Enter to continue...")
         fn.clearscreen()
 
 # ──────────────────────────────────────────────
