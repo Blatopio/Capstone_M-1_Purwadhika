@@ -25,7 +25,9 @@ def main():
                 fn.route_to_menu(user)
 
         elif choice == "2":
-            print("Create new account")
+            fn.create_account()
+            input("\nPress Enter to continue...")
+            fn.clearscreen()
 
         elif choice == "0":
             fn.exit_app()

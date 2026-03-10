@@ -1,4 +1,5 @@
 import function as fn
+import numpy as np  
 import pandas as pd
 from tabulate import tabulate
 import matplotlib.pyplot as plt
@@ -490,7 +491,6 @@ def show_chart(label="ALL TIME", date_filter=None):
     df["date"]       = pd.to_datetime(df["date"])
     df["month"]      = df["date"].dt.to_period("M").astype(str)
     df["menu_label"] = df["name"].str.replace("Coffee ", "") + "\n(" + df["size"] + ")"
-    print(df)
 
     rev_menu  = df.groupby("menu_label")["total_price"].sum().reset_index()
     rev_menu  = rev_menu.sort_values("total_price", ascending=False)
@@ -591,7 +591,6 @@ def show_chart(label="ALL TIME", date_filter=None):
     # Histogram
     ax4 = fig.add_subplot(gs[2, 2:])
     ax4.set_facecolor(BG_CHART)
-    import numpy as np
     n, bins, patches = ax4.hist(df["total_price"], bins=20,
                                 edgecolor='white', linewidth=0.5)
     for patch, color in zip(patches, plt.cm.cool(np.linspace(0.2, 0.9, len(patches)))):
@@ -645,9 +644,10 @@ def admin_manage_menu():
         ╔══════════════════════════════════════╗
         ║           MANAGE MENU                ║
         ╠══════════════════════════════════════╣
-        ║  [1] Add new menu item               ║
-        ║  [2] Edit menu price                 ║
-        ║  [3] Delete menu item                ║
+        ║  [1] View current menu               ║
+        ║  [2] Add new menu item               ║
+        ║  [3] Edit menu price                 ║
+        ║  [4] Delete menu item                ║
         ║  [0] Back                            ║
         ║  [999] Exit Application              ║
         ╚══════════════════════════════════════╝''')
@@ -655,13 +655,17 @@ def admin_manage_menu():
 
         if choice == "1":
             fn.clearscreen()
-            add_menu_item()
+            show_menu_table()
             input("\nPress Enter to go back...")
         elif choice == "2":
             fn.clearscreen()
-            edit_menu_price()
+            add_menu_item()
             input("\nPress Enter to go back...")
         elif choice == "3":
+            fn.clearscreen()
+            edit_menu_price()
+            input("\nPress Enter to go back...")
+        elif choice == "4":
             fn.clearscreen()
             delete_menu_item()
             input("\nPress Enter to go back...")
@@ -674,7 +678,176 @@ def admin_manage_menu():
             print("\n[!] Invalid choice. Please try again.")
         fn.clearscreen()
 
+
+def show_menu_table():
+    mydb = fn.conn_sql()
+    cursor = mydb.cursor()
+    cursor.execute("SELECT id_menu, name, category, size, price FROM menu ORDER BY name, size")
+    results = cursor.fetchall()
+    cursor.close()
+    mydb.close()
+
+    df = pd.DataFrame(results, columns=['ID', 'Name', 'Category', 'Size', 'Price'])
+    df['Price'] = df['Price'].apply(lambda x: f"Rp {x:,.0f}")
+
+    print(f"\n{'='*65}")
+    print(f"  CURRENT MENU ({len(df)} items)")
+    print(f"{'='*65}")
+    print(tabulate(df, headers='keys', tablefmt='psql', showindex=False))
+    print(f"{'='*65}\n")
+
 # ──────────────────────────────────────────────
 # [4.1] Function to add new menu item
 # ──────────────────────────────────────────────
 
+def add_menu_item():
+    show_menu_table()
+
+    mydb = fn.conn_sql()
+    cursor = mydb.cursor()
+
+    #input new menu 
+    print("  ── Add New Menu Item ──\n")
+    name     = input("  Name     : ").strip()
+    category = input("  Category : ").strip()
+    size     = input("  Size     : ").strip()+'ml'
+
+    while True:
+        try:
+            price = int(input("  Price    : Rp ").strip())
+            if price > 0:
+                break
+            else:
+                print("  [!] Price must be greater than 0.")
+        except ValueError:
+            print("  [!] Price must be a number.")
+
+    #Confirm 
+    print(f"""
+New item to add:
+Name     : {name}         
+Category : {category}
+Size     : {size}
+Price    : Rp {price:,.0f}
+          """)
+    confirm = input("\n  Confirm? (y/n): ").strip().lower()
+
+    if confirm == 'y':
+        cursor.execute(
+            "INSERT INTO menu (name, category, size, price) VALUES (%s, %s, %s, %s)",
+            (name, category, size, price)
+        )
+        mydb.commit()
+        print(f"\n  [✓] '{name} ({size})' successfully added!")
+    else:
+        print("\n  [!] Cancelled. No changes made.")
+
+    cursor.close()
+    mydb.close()
+
+# ──────────────────────────────────────────────
+# [4.2] Function to edit menu price
+# ──────────────────────────────────────────────
+
+def edit_menu_price():
+    show_menu_table()
+
+    mydb = fn.conn_sql()
+    cursor = mydb.cursor()
+    cursor.execute("SELECT id_menu, name, size, price FROM menu ORDER BY name, size")
+    menus = cursor.fetchall()
+
+    while True:
+        try:
+            id_input = int(input("  Enter ID menu to edit: ").strip())
+            cursor.execute("SELECT id_menu, name, size, price FROM menu WHERE id_menu = %s", (id_input,))
+            selected = cursor.fetchone()
+            if selected:
+                break
+            else:
+                print(f"  [!] ID {id_input} not found. Please try again.")
+        except ValueError:
+            print("  [!] Invalid input. Please enter a number.")
+
+    id_menu, name, size, old_price = selected
+    print(f"\n  Selected  : {name} ({size})")
+    print(f"  Old Price : Rp {old_price:,.0f}")
+
+    # Input new price
+    while True:
+        try:
+            new_price = int(input("  New Price : Rp ").strip())
+            if new_price > 0:
+                break
+            else:
+                print("  [!] Price must be greater than 0.")
+        except ValueError:
+            print("  [!] Price must be a number.")
+
+    # Confirm change
+    print(f"\n  Change price of {name} ({size})")
+    print(f"  Rp {old_price:,.0f}  →  Rp {new_price:,.0f}")
+    confirm = input("\n  Confirm? (y/n): ").strip().lower()
+
+    if confirm == 'y':
+        cursor.execute(
+            "UPDATE menu SET price = %s WHERE id_menu = %s",
+            (new_price, id_menu)
+        )
+        mydb.commit()
+        print(f"\n  [✓] Price updated successfully!")
+    else:
+        print("\n  [!] Cancelled. No changes made.")
+
+    cursor.close()
+    mydb.close()
+
+# ──────────────────────────────────────────────
+# [4.3] Function to delete menu item
+# ──────────────────────────────────────────────
+
+def delete_menu_item():
+    show_menu_table()
+
+    mydb = fn.conn_sql()
+    cursor = mydb.cursor()
+
+    while True:
+        try:
+            id_input = int(input("  Enter ID menu to delete: ").strip())
+            cursor.execute("SELECT id_menu, name, size, price FROM menu WHERE id_menu = %s", (id_input,))
+            selected = cursor.fetchone()
+            if selected:
+                break
+            else:
+                print(f"  [!] ID {id_input} not found. Please try again.")
+        except ValueError:
+            print("  [!] Invalid input. Please enter a number.")
+
+    id_menu, name, size, price = selected
+
+    # Confirm
+    print(f"\n  Item to delete:")
+    print(f"  ID       : {id_menu}")
+    print(f"  Name     : {name}")
+    print(f"  Size     : {size}")
+    print(f"  Price    : Rp {price:,.0f}")
+    print(f"\n  ⚠️  This action cannot be undone!")
+    confirm = input("\n  Are you sure? (y/n): ").strip().lower()
+
+    if confirm == 'y':
+        cursor.execute("DELETE FROM menu WHERE id_menu = %s", (id_menu,))
+        mydb.commit()
+        print(f"\n  [✓] '{name} ({size})' successfully deleted!")
+    else:
+        print("\n  [!] Cancelled. No changes made.")
+
+    cursor.close()
+    mydb.close()
+
+# ──────────────────────────────────────────────
+# FEATURE 5 - REMOVE CUSTOMER ACCOUNT
+# ──────────────────────────────────────────────
+def admin_remove_customer():
+    print("\n  [Coming soon] Remove Customer Account")
+    input("\n  Press Enter to go back...")

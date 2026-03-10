@@ -78,7 +78,53 @@ def auth_verify(username, password):
         return {"id_account": id_account, "username": username, "role": role}
     else:
         print("Invalid username or password!, Please try again or make a new account.")
-        
+
+#---------------
+# Create Account
+#---------------
+
+def create_account():
+    print("\n  ── Create New Account ──\n")
+
+    mydb = conn_sql()
+    cursor = mydb.cursor()
+
+    #Checking for unique username
+    while True:
+        username = input("  Username : ").strip()
+        if not username:
+            print("  [!] Username cannot be empty.")
+            continue
+        cursor.execute("SELECT id_account FROM accounts WHERE username = %s", (username,))
+        if cursor.fetchone():
+            print(f"  [!] Username '{username}' is already taken. Please choose another.")
+        else:
+            break
+    #Checking for password length
+    while True:
+        password = input("  Password : ").strip()
+        if len(password) < 4:
+            print("  [!] Password must be at least 4 characters.")
+        else:
+            break
+    # Confirm 
+    print(f"\n  New account to create:")
+    print(f"  Username : {username}")
+    print(f"  Role     : customer")
+    confirm = input("\n  Confirm? (y/n): ").strip().lower()
+
+    if confirm == 'y':
+        cursor.execute(
+            "INSERT INTO accounts (username, password, role) VALUES (%s, %s, %s)",
+            (username, password, 'customer')
+        )
+        mydb.commit()
+        print(f"\n  [✓] Account '{username}' successfully created! You can now login.")
+    else:
+        print("\n  [!] Cancelled. No account created.")
+
+    cursor.close()
+    mydb.close()
 #---------------
 # Routing menu based on role
 #---------------
