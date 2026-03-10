@@ -252,8 +252,9 @@ def admin_show_statistics():
         ╔══════════════════════════════════════╗
         ║          SALES STATISTICS            ║
         ╠══════════════════════════════════════╣
-        ║  [1] All time statistics             ║
-        ║  [2] Statistics by date range        ║
+        ║  [1] Calculate average by column     ║
+        ║  [2] All time statistics             ║
+        ║  [3] Statistics by date range        ║
         ║  [0] Back                            ║
         ║  [999] Exit Application              ║
         ╚══════════════════════════════════════╝''')
@@ -261,9 +262,13 @@ def admin_show_statistics():
 
         if choice == "1":
             fn.clearscreen()
-            show_statistics()
+            calculate_average()
             input("\nPress Enter to go back...")
         elif choice == "2":
+            fn.clearscreen()
+            show_statistics()
+            input("\nPress Enter to go back...")
+        elif choice == "3":
             fn.clearscreen()
             show_statistics_by_date()
             input("\nPress Enter to go back...")
@@ -277,7 +282,65 @@ def admin_show_statistics():
         fn.clearscreen()
 
 # ──────────────────────────────────────────────
-#[2.1] Function to show overall sales statistics
+#[2.1] Function to Calculate average by column
+# ──────────────────────────────────────────────
+
+def calculate_average():
+    mydb = fn.conn_sql()
+
+    query = """
+        SELECT 
+            t.total_price,
+            t.quantity,
+            t.payment_method,
+            m.name,
+            m.size
+        FROM transactions t
+        JOIN menu m ON t.id_menu = m.id_menu
+    """
+
+    df = pd.read_sql(query, mydb)
+    mydb.close()
+
+    
+    print(f"\n{'='*70}")
+    print(f"  DATA PREVIEW (first 10 rows)")
+    print(f"{'='*70}")
+    print(tabulate(df.head(10), headers='keys', tablefmt='psql', showindex=False))
+    print(f"{'='*70}\n")
+
+    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+
+    print("  Available columns for average calculation:\n")
+    for i, col in enumerate(numeric_cols, 1):
+        print(f"  [{i}] {col}")
+
+    while True:
+        try:
+            choice = int(input("\n  Select column number: ").strip())
+            if 1 <= choice <= len(numeric_cols):
+                selected_col = numeric_cols[choice - 1]
+                break
+            else:
+                print(f"  [!] Please enter a number between 1 and {len(numeric_cols)}.")
+        except ValueError:
+            print("  [!] Invalid input. Please enter a number.")
+
+    avg = df[selected_col].mean()
+
+    print(f"\n{'='*55}")
+    print(f"  AVERAGE CALCULATION")
+    print(f"{'='*55}")
+    if selected_col == 'total_price':
+        print(f"  Column         : {selected_col}")
+        print(f"  Average Value  : Rp {avg:,.0f}")
+    else:
+        print(f"  Column         : {selected_col}")
+        print(f"  Average Value  : {avg:.2f}")
+    print(f"{'='*55}\n")
+
+# ──────────────────────────────────────────────
+#[2.2] Function to show overall sales statistics
 # ──────────────────────────────────────────────
 
 def show_statistics(label="ALL TIME", date_filter=None):
@@ -303,8 +366,6 @@ def show_statistics(label="ALL TIME", date_filter=None):
 
     df['menu_label'] = df['name'] + ' (' + df['size'] + ')'
 
-    print(df.head())
-
     total_transactions = len(df)
     total_revenue = df['total_price'].sum()
     avg_transaction_value = df['total_price'].mean()
@@ -312,13 +373,9 @@ def show_statistics(label="ALL TIME", date_filter=None):
     best_seller = df.groupby('menu_label')['quantity'].sum().idxmax()
     best_seller_qty = df.groupby('menu_label')['quantity'].sum().max()
 
-    print(best_seller, best_seller_qty)
-
     rev_per_menu = df.groupby('menu_label')['total_price'].sum().reset_index()
-    print(rev_per_menu.head())
     rev_per_menu.columns = ['Menu', 'Revenue']
     rev_per_menu = rev_per_menu.sort_values('Revenue', ascending=False)
-
     
     rev_per_payment = df.groupby('payment_method')['total_price'].sum().reset_index()
     rev_per_payment.columns = ['Payment Method', 'Revenue']
@@ -347,7 +404,7 @@ def show_statistics(label="ALL TIME", date_filter=None):
     print(f"\n{'='*55}\n")
 
 # ──────────────────────────────────────────────
-#[2.2] Function to show sales statistics filtered by date range
+#[2.3] Function to show sales statistics filtered by date range
 # ──────────────────────────────────────────────
 
 def show_statistics_by_date():
@@ -369,3 +426,252 @@ def show_statistics_by_date():
         label=f"{start} to {end}",
         date_filter=f" WHERE DATE(t.date) BETWEEN '{start}' AND '{end}'"
     )
+
+# ──────────────────────────────────────────────
+# FEATURE 3 - SHOW SALES CHART
+# ──────────────────────────────────────────────
+
+def admin_show_chart():
+    while True:
+        fn.print_header()
+        print('''
+        ╔══════════════════════════════════════╗
+        ║           SALES CHART                ║
+        ╠══════════════════════════════════════╣
+        ║  [1] All time chart                  ║
+        ║  [2] Chart by date range             ║
+        ║  [0] Back                            ║
+        ║  [999] Exit Application              ║
+        ╚══════════════════════════════════════╝''')
+        choice = input("\nEnter your choice: ").strip()
+
+        if choice == "1":
+            fn.clearscreen()
+            show_chart()
+            input("\nPress Enter to go back...")
+        elif choice == "2":
+            fn.clearscreen()
+            show_chart_by_date()
+            input("\nPress Enter to go back...")
+        elif choice == "0":
+            fn.clearscreen()
+            break
+        elif choice == "999":
+            fn.exit_app()
+        else:
+            print("\n[!] Invalid choice. Please try again.")
+        fn.clearscreen()
+
+# ──────────────────────────────────────────────
+#[3.1] Function to show sales chart (overall and by date range)
+# ──────────────────────────────────────────────
+
+def show_chart(label="ALL TIME", date_filter=None):
+    mydb = fn.conn_sql()
+
+    query = """
+        SELECT 
+            t.total_price,
+            t.quantity,
+            t.payment_method,
+            m.name,
+            m.size,
+            t.date
+        FROM transactions t
+        JOIN menu m ON t.id_menu = m.id_menu
+    """
+
+    if date_filter:
+        query += date_filter
+
+    df = pd.read_sql(query, mydb)
+    mydb.close()
+
+    df["date"]       = pd.to_datetime(df["date"])
+    df["month"]      = df["date"].dt.to_period("M").astype(str)
+    df["menu_label"] = df["name"].str.replace("Coffee ", "") + "\n(" + df["size"] + ")"
+    print(df)
+
+    rev_menu  = df.groupby("menu_label")["total_price"].sum().reset_index()
+    rev_menu  = rev_menu.sort_values("total_price", ascending=False)
+    rev_pay   = df.groupby("payment_method")["total_price"].sum().reset_index()
+    rev_month = df.groupby("month")["total_price"].sum().reset_index()
+    best      = df.groupby("menu_label")["quantity"].sum().idxmax()
+
+    # Colors
+    CARD_COLORS = ["#4361EE", "#F72585", "#4CC9F0", "#7209B7"]
+    BAR_COLORS  = ["#4361EE", "#4895EF", "#4CC9F0",
+                   "#F72585", "#B5179E", "#7209B7",
+                   "#3A0CA3", "#480CA8", "#560BAD"]
+    PIE_COLORS  = ["#4361EE", "#F72585"]
+    BG_CHART    = "#FAFAFA"
+
+    # Figure
+    fig = plt.figure(figsize=(16, 10))
+    fig.patch.set_facecolor("#FFFFFF")
+    gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.6, wspace=0.4)
+
+    # Cards
+    card_data = [
+        ("Total Transactions", f"{len(df):,}",                           CARD_COLORS[0]),
+        ("Total Revenue",      f"Rp {df['total_price'].sum()/1e6:.2f}M", CARD_COLORS[1]),
+        ("Avg Order Value",    f"Rp {df['total_price'].mean():,.0f}",     CARD_COLORS[2]),
+        ("Best Seller",        best.replace("\n", " "),                   CARD_COLORS[3]),
+    ]
+    for i, (title, val, color) in enumerate(card_data):
+        ax = fig.add_subplot(gs[0, i])
+        ax.set_facecolor("#F0F4FF")
+        ax.plot([0.05, 0.95], [0.92, 0.92], color=color, linewidth=4,
+                transform=ax.transAxes, solid_capstyle='round')
+        ax.text(0.5, 0.58, val, ha='center', va='center',
+                fontsize=13, fontweight='bold', color=color,
+                transform=ax.transAxes)
+        ax.text(0.5, 0.2, title, ha='center', va='center',
+                fontsize=8, color='#555555', transform=ax.transAxes)
+        for spine in ax.spines.values():
+            spine.set_edgecolor('#DDDDDD')
+            spine.set_linewidth(1)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    # Bar chart
+    ax1 = fig.add_subplot(gs[1, :2])
+    ax1.set_facecolor(BG_CHART)
+    bars = ax1.bar(rev_menu["menu_label"], rev_menu["total_price"],
+                   color=BAR_COLORS[:len(rev_menu)], edgecolor='white', linewidth=0.5)
+    ax1.set_title("Revenue per Menu Item", fontsize=11, fontweight='bold', color='#333333', pad=10)
+    ax1.tick_params(colors='#555555', labelsize=7)
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"Rp {x/1e6:.1f}M"))
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['left'].set_color('#DDDDDD')
+    ax1.spines['bottom'].set_color('#DDDDDD')
+    for bar in bars:
+        h = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2, h + 30000,
+                 f"Rp {h/1e6:.1f}M", ha='center', va='bottom',
+                 fontsize=6.5, color='#333333')
+
+    # Pie chart
+    ax2 = fig.add_subplot(gs[1, 2:])
+    ax2.set_facecolor(BG_CHART)
+    wedges, texts, autotexts = ax2.pie(
+        rev_pay["total_price"],
+        labels=rev_pay["payment_method"],
+        autopct='%1.1f%%',
+        colors=PIE_COLORS,
+        startangle=90,
+        wedgeprops=dict(edgecolor='white', linewidth=2),
+        textprops={'fontsize': 9, 'color': '#333333'}
+    )
+    for at in autotexts:
+        at.set_color('white')
+        at.set_fontweight('bold')
+    ax2.set_title("Revenue by Payment Method", fontsize=11, fontweight='bold', color='#333333', pad=10)
+
+    # Line chart
+    ax3 = fig.add_subplot(gs[2, :2])
+    ax3.set_facecolor(BG_CHART)
+    ax3.plot(rev_month["month"], rev_month["total_price"],
+             marker='o', color="#F72585", linewidth=2.5,
+             markersize=6, markerfacecolor='white', markeredgewidth=2)
+    ax3.fill_between(range(len(rev_month)), rev_month["total_price"],
+                     alpha=0.1, color="#F72585")
+    ax3.set_title("Revenue Over Time", fontsize=11, fontweight='bold', color='#333333', pad=10)
+    ax3.tick_params(colors='#555555', labelsize=8, axis='x', rotation=30)
+    ax3.tick_params(colors='#555555', labelsize=8, axis='y')
+    ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"Rp {x/1e6:.1f}M"))
+    ax3.set_xticks(range(len(rev_month)))
+    ax3.set_xticklabels(rev_month["month"])
+    ax3.spines['top'].set_visible(False)
+    ax3.spines['right'].set_visible(False)
+    ax3.spines['left'].set_color('#DDDDDD')
+    ax3.spines['bottom'].set_color('#DDDDDD')
+
+    # Histogram
+    ax4 = fig.add_subplot(gs[2, 2:])
+    ax4.set_facecolor(BG_CHART)
+    import numpy as np
+    n, bins, patches = ax4.hist(df["total_price"], bins=20,
+                                edgecolor='white', linewidth=0.5)
+    for patch, color in zip(patches, plt.cm.cool(np.linspace(0.2, 0.9, len(patches)))):
+        patch.set_facecolor(color)
+    ax4.set_title("Order Value Distribution", fontsize=11, fontweight='bold', color='#333333', pad=10)
+    ax4.tick_params(colors='#555555', labelsize=8)
+    ax4.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"Rp {int(x/1000)}k"))
+    ax4.spines['top'].set_visible(False)
+    ax4.spines['right'].set_visible(False)
+    ax4.spines['left'].set_color('#DDDDDD')
+    ax4.spines['bottom'].set_color('#DDDDDD')
+
+    # ── Title & show ──
+    fig.suptitle(f"DotDotDot Café — Sales Dashboard ({label})",
+                 fontsize=16, fontweight='bold', color='#222222', y=0.98)
+    print("\n  [!] Chart is opening in a new window...")
+    plt.show()
+
+# ──────────────────────────────────────────────
+#[3.2] Function to show sales chart filtered by date range
+# ──────────────────────────────────────────────
+
+def show_chart_by_date():
+    print("  ── Chart by Date Range ──")
+    print("  Format: YYYY-MM-DD (e.g. 2026-01-01)\n")
+
+    while True:
+        start = input("  Start date: ").strip()
+        end   = input("  End date  : ").strip()
+        try:
+            pd.to_datetime(start)
+            pd.to_datetime(end)
+            break
+        except ValueError:
+            print("\n[!] Invalid date format. Please use YYYY-MM-DD.\n")
+
+    fn.clearscreen()
+    show_chart(
+        label=f"{start} to {end}",
+        date_filter=f" WHERE DATE(t.date) BETWEEN '{start}' AND '{end}'"
+    )
+
+# ──────────────────────────────────────────────
+# FEATURE 4 - MANAGE MENU (ADD/EDIT/DELETE)
+# ──────────────────────────────────────────────
+
+def admin_manage_menu():
+    while True:
+        fn.print_header()
+        print('''
+        ╔══════════════════════════════════════╗
+        ║           MANAGE MENU                ║
+        ╠══════════════════════════════════════╣
+        ║  [1] Add new menu item               ║
+        ║  [2] Edit menu price                 ║
+        ║  [3] Delete menu item                ║
+        ║  [0] Back                            ║
+        ║  [999] Exit Application              ║
+        ╚══════════════════════════════════════╝''')
+        choice = input("\nEnter your choice: ").strip()
+
+        if choice == "1":
+            fn.clearscreen()
+            add_menu_item()
+            input("\nPress Enter to go back...")
+        elif choice == "2":
+            fn.clearscreen()
+            edit_menu_price()
+            input("\nPress Enter to go back...")
+        elif choice == "3":
+            fn.clearscreen()
+            delete_menu_item()
+            input("\nPress Enter to go back...")
+        elif choice == "0":
+            fn.clearscreen()
+            break
+        elif choice == "999":
+            fn.exit_app()
+        else:
+            print("\n[!] Invalid choice. Please try again.")
+        fn.clearscreen()
+
+        
