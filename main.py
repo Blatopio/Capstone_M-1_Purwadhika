@@ -1,76 +1,38 @@
-# Library List
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import mysql.connector
-
-# Connect to SQL Database
-def conn_sql():
-    try:
-        mydb = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="user",
-            database="dotdotdot_app"
-        )
-        # print("*Connected to database...*", flush=True)
-        return mydb
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
-
-#Menu
-def login_menu():
-    #get user input for login
-    username = input('\nUsername: ')
-    password = input('Password: ')
-    print(f"\nAttempting login for user: {username}")
-    return username, password
-
-def auth_verify(username, password):
-    #verify login credentials
-    mydb = conn_sql()
-    cursor = mydb.cursor()
-    query = "SELECT * FROM accounts WHERE username = %s AND password = %s"
-    cursor.execute(query, (username, password))
-    result = cursor.fetchone()
-    # print(f"Login query executed. Result: {result}")
-    if result:
-        print("Login successful!")
-        auth = True
-        return True
-    else:
-        print("Invalid username or password.")
-        return False
-
-    while auth:
+import function as fn
 # Main Function
 def main():
+    #clear screen
+    fn.clearscreen()
     # Connect to database
-    mydb = conn_sql()
-    print(r'''
-   ___       __  ___       __  ___       __      ___   ___  ___ 
-  / _ \___  / /_/ _ \___  / /_/ _ \___  / /_    / _ | / _ \/ _  \
- / // / _ \/ __/ // / _ \/ __/ // / _ \/ __/   / __ |/ ___/ ___/
-/____/\___/\__/____/\___/\__/____/\___/\__/   /_/ |_/_/  /_/    
-                                                                
-[1] Login to existing account
-[2] Create new account
-
-[Exit]         
-          ''')
+    mydb = fn.conn_sql()
     
-    choice = input("Enter your choice: ")
-    if choice == "1":
-        print("\n[Login to existing account]")
-        username, password = login_menu()
-        auth_verify(username, password)
-    elif choice == "2":
-        print("Create new account")
-    elif choice.lower() == "exit":
-        print("Exiting the application.")
-        return
-    else:
-        print("Invalid choice. Please enter 1 or 2.")
+    while True:
+        fn.print_header()
+        print('''
+            ╔══════════════════════════════════════╗
+            ║ [1] Login to existing account        ║
+            ║ [2] Create new account               ║
+            ║ [0] Exit                             ║
+            ╚══════════════════════════════════════╝''')
+        choice = input("\nEnter your choice: ").strip()
+        fn.clearscreen()
+        if choice == "1":
+            print("\n[Login]")
+            username, password = fn.login_menu()
+            user = fn.auth_verify(username, password)
+            if user:
+                fn.clearscreen()
+                fn.route_to_menu(user)
+
+        elif choice == "2":
+            print("Create new account")
+
+        elif choice == "0":
+            fn.exit_app()
+        
+        else:
+            print("\n[Invalid choice. Please enter 1 or 2 and 0 for exit.]")
+    fn.clearscreen()        
 
 if __name__ == "__main__":
     main()
